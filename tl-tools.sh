@@ -61,7 +61,37 @@ function tl_organize_and_create_demo {
 				ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.JPG" -c:v libx264 -pix_fmt yuv420p "$dir/demo.mp4"
 				#tlassemble "$dir/"Jpg "$dir/"demo.mov -fps 25 -height 1080 -codec h264 -quality high
 			else
-				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no JPG files in directory"
+				echo "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Jpg files in directory"
+				echo "${GREEN_COLOR}[OK] ${DEFAULT}Looking for Raw files to create preview"
+				if [ -d "$dir/Raw" ] && [ ! -d "$dir/Jpg" ]; then
+					echo "${GREEN_COLOR}[OK] ${DEFAULT}Creating JPGs preview in $dir"
+					mkdir -p "$dir/Jpg"
+					cr2file=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.CR2")
+					arwfile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.ARW")
+					neffile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.NEF")
+					if [ ! -z "$arwfile" ]; then
+						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
+						for i in $dir/Raw/*;
+							do
+								#name=${i/Raw/"Jpg"}
+								#name=${name%%.*}
+								#dcraw -c $i | pnmtojpeg > $name.JPG
+								dcraw -e $i
+						done
+						echo "${GREEN_COLOR}[OK] ${DEFAULT}Moving extracted the camera-generated thumbnail JPGs"
+						mv $dir/Raw/*.jpg $dir/Jpg/
+						echo "${GREEN_COLOR}[OK] ${DEFAULT}Creating preview from JPGs"
+						ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.jpg" -c:v libx264 -pix_fmt yuv420p -vf scale="1280:-2" "$dir/demo.mp4"
+					fi
+					if [ ! -z "$cr2file" ]; then
+						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found CR2 files"
+					fi
+					if [ ! -z "$neffile" ]; then
+						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found NEF files"
+					fi
+				else
+					echo "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Raw to create preview"
+				fi
 			fi
 	done
 
