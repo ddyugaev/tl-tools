@@ -1,12 +1,47 @@
 #!/usr/bin/env bash
 
+set -eu
+
 delimiter="___________________________________________________________________"
 GREEN_COLOR="\033[0;32m"
 YELLOW_COLOR="\033[33m"
 DEFAULT="\033[0m"
 
+#Check for dependencies
+function dependencies_check {
+
+    dependencies=("ffmpeg" "dcraw")
+    not_installed=()
+
+    for i in "${dependencies[@]}"
+    do
+        if ! [ -x "$(command -v $i)" ]; then
+            not_installed+=("$i")
+        fi
+    done
+
+    if [ ${#not_installed[@]} -eq 0 ]; then
+        echo -e "${GREEN_COLOR}[OK] ${DEFAULT}All dependencies installed"
+    else
+        echo "Please install following binaries and rerun this script"
+		echo ""
+        for i in "${not_installed[@]}"
+        do
+            if [ $i = ffmpeg ]; then
+                echo -e "${GREEN_COLOR}brew install ffmpeg${DEFAULT}"
+            fi
+            if [ $i = dcraw ]; then
+                echo -e "${GREEN_COLOR}brew install dcraw${DEFAULT}"
+            fi
+        done
+		echo ""
+        exit 1
+    fi
+}
+
 function tl_organize_and_create_demo {
 	clear
+	dependencies_check
 	# Checking for at least one subdirectory existing
 	ls -d */ > /dev/null
 	if [ $? -eq 0 ]
@@ -22,7 +57,6 @@ function tl_organize_and_create_demo {
 			echo $delimiter
 			dir=$(echo $i | sed 's|/$||');
 			rawfiles=$(find "$dir" -type f -maxdepth 1 \( -name "*.ARW" -or -name "*.CR2" -or -name "*.NEF" \))
-
 			if [ ! -d "$dir/Raw" ] && [ ! -z "$rawfiles" ]; then
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}The folder Raw does NOT exist in $dir"
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating Raw folder in $dir"
@@ -53,44 +87,44 @@ function tl_organize_and_create_demo {
 				mkdir -p "$dir/Jpg"
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving JPG files to $dir/Jpg/"
 				mv "$dir/"*.JPG "$dir/Jpg/"
-				if [ -f "$dir/demo.mov" ]; then
-					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Rename $dir/demo.mov to $dir/demo_old.mov"
-					mv "$dir/demo.mov" "$dir/demo_old.mov"
+				if [ -f "$dir/demo.mp4" ]; then
+					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Rename $dir/demo.mp4 to $dir/demo_old.mp4"
+					mv "$dir/demo.mp4" "$dir/demo_old.mp4"
 				fi
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating demo timelapse from JPGs"
 				ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.JPG" -c:v libx264 -pix_fmt yuv420p "$dir/demo.mp4"
 				#tlassemble "$dir/"Jpg "$dir/"demo.mov -fps 25 -height 1080 -codec h264 -quality high
 			else
-				echo "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Jpg files in directory"
-				echo "${GREEN_COLOR}[OK] ${DEFAULT}Looking for Raw files to create preview"
+				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Jpg files in directory"
 				if [ -d "$dir/Raw" ] && [ ! -d "$dir/Jpg" ]; then
-					echo "${GREEN_COLOR}[OK] ${DEFAULT}Creating JPGs preview in $dir"
+					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Looking for Raw files to create preview"
 					mkdir -p "$dir/Jpg"
 					cr2file=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.CR2")
 					arwfile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.ARW")
 					neffile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.NEF")
 					if [ ! -z "$arwfile" ]; then
-						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
 						for i in $dir/Raw/*;
 							do
-								#name=${i/Raw/"Jpg"}
-								#name=${name%%.*}
-								#dcraw -c $i | pnmtojpeg > $name.JPG
 								dcraw -e $i
 						done
-						echo "${GREEN_COLOR}[OK] ${DEFAULT}Moving extracted the camera-generated thumbnail JPGs"
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving extracted the camera-generated thumbnail JPGs"
 						mv $dir/Raw/*.jpg $dir/Jpg/
-						echo "${GREEN_COLOR}[OK] ${DEFAULT}Creating preview from JPGs"
+						if [ -f "$dir/demo.mp4" ]; then
+							echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Rename $dir/demo.mp4 to $dir/demo_old.mp4"
+							mv "$dir/demo.mp4" "$dir/demo_old.mp4"
+						fi
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating preview from JPGs"
 						ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.jpg" -c:v libx264 -pix_fmt yuv420p -vf scale="1280:-2" "$dir/demo.mp4"
 					fi
 					if [ ! -z "$cr2file" ]; then
-						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found CR2 files"
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found CR2 files"
 					fi
 					if [ ! -z "$neffile" ]; then
-						echo "${GREEN_COLOR}[OK] ${DEFAULT}Found NEF files"
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found NEF files"
 					fi
 				else
-					echo "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Raw to create preview"
+					echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Raw to create preview"
 				fi
 			fi
 	done
@@ -165,9 +199,7 @@ function move_lightroom_folders {
 	clear
 	for i in */;
 		do
-			echo $delimiter
 			dir=$(echo $i | sed 's|/$||');
-
 			if [ ! -d "$dir/Lightroom" ]; then
 				if [ ! -d "$dir/Raw/Lightroom" ]; then
 					echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The Lightroom folder does NOT exist in $dir/Raw"
@@ -178,6 +210,7 @@ function move_lightroom_folders {
 			else
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The Lightroom folder does EXIST in $dir"
 			fi
+			echo $delimiter
 	done;
 }
 
@@ -283,6 +316,7 @@ function help {
 	# Display Help
 	echo
 	echo -e "Syntax: tl-tools.sh [-h|-d|-360|-lr|-p|-bfr|-bfn]"
+	echo
 	echo -e "options:"
 	echo -e "${YELLOW_COLOR}-h | --help${DEFAULT}       Show help"
 	echo -e "${YELLOW_COLOR}-d | --demo${DEFAULT}       Organize photos and create demo from JPGs. (Run from folder with subfolders projects)"
@@ -294,40 +328,30 @@ function help {
 	echo
 }
 
-while :
-do
 	case "$1" in
 		-h | --help)
 			help
-			exit 0
 			;;
 		-d | --demo)
 			tl_organize_and_create_demo
-			exit 0
 			;;
 		-360 )
 			360_organize
-			exit 0
 			;;
 		-lr )
 			move_lightroom_folders
-			exit 0
 			;;
 		-p | --project)
 			create_ae_project
-			exit 0
 			;;
 		-bfr )
 			bf_move_raw_files
-			exit 0
 			;;
 		-bfn )
 			bf_n_move
-			exit 0
 			;;
 		--) # End of all options
 			shift
-			break
 			;;
 		-*)
 			echo -e "${YELLOW_COLOR}[ERROR] ${DEFAULT}Unknown option: $1" >&2
@@ -335,9 +359,8 @@ do
 			exit 1
 			;;
 		*)  # No more options
+			echo -e "${YELLOW_COLOR}[ERROR] ${DEFAULT}Unknown option: $1" >&2
 			help
-			break
 			exit 1
 			;;
 	esac
-done
