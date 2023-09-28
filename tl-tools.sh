@@ -104,12 +104,12 @@ function tl_organize_and_create_demo {
 					neffile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.NEF")
 					if [ ! -z "$arwfile" ]; then
 						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
-						for i in $dir/Raw/*;
+						for i in "$dir"/Raw/*;
 							do
-								dcraw -e $i
+								dcraw -e "$i"
 						done
 						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving extracted the camera-generated thumbnail JPGs"
-						mv $dir/Raw/*.jpg $dir/Jpg/
+						mv "$dir"/Raw/*.jpg "$dir"/Jpg/
 						if [ -f "$dir/demo.mp4" ]; then
 							echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Rename $dir/demo.mp4 to $dir/demo_old.mp4"
 							mv "$dir/demo.mp4" "$dir/demo_old.mp4"
