@@ -104,7 +104,7 @@ function tl_organize_and_create_demo {
 					neffile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.NEF")
 					if [ ! -z "$arwfile" ]; then
 						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
-						for i in "$dir"/Raw/*;
+						for i in "$dir"/Raw/*.ARW;
 							do
 								dcraw -e "$i"
 						done
