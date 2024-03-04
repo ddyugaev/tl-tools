@@ -99,12 +99,11 @@ function tl_organize_and_create_demo {
 				if [ -d "$dir/Raw" ] && [ ! -d "$dir/Jpg" ]; then
 					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Looking for Raw files to create preview"
 					mkdir -p "$dir/Jpg"
-					cr2file=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.CR2")
-					arwfile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.ARW")
-					neffile=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.NEF")
-					if [ ! -z "$arwfile" ]; then
-						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found ARW files"
-						for i in "$dir"/Raw/*.ARW;
+					rawfiles=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.CR2" -o -name "*.ARW" -o -name "*.NEF")
+					if [ ! -z "$rawfiles" ]; then
+						raw_extension=$(echo $rawfiles | rev | cut -d"." -f1 | rev)
+						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found $raw_extension files"
+						for i in "$dir"/Raw/*.$raw_extension;
 							do
 								dcraw -e "$i"
 						done
@@ -116,12 +115,6 @@ function tl_organize_and_create_demo {
 						fi
 						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating preview from JPGs"
 						ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.jpg" -c:v libx264 -pix_fmt yuv420p -vf scale="1280:-2" "$dir/demo.mp4"
-					fi
-					if [ ! -z "$cr2file" ]; then
-						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found CR2 files"
-					fi
-					if [ ! -z "$neffile" ]; then
-						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found NEF files"
 					fi
 				else
 					echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Raw to create preview"
