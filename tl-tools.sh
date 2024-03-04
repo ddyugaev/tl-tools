@@ -240,7 +240,7 @@ function create_ae_project {
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The project file $dir.txt already exists"
 			else
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating description file in $dir folder"
-				touch "$dir/$dir.txt"
+				echo -e "Lens: \nAperture: \nShutter: \nInterval: \nND: \nPivot Point: \nLocation: " > "$dir/$dir.txt"
 			fi
 	done
 }
