@@ -43,9 +43,7 @@ function tl_organize_and_create_demo {
 	clear
 	dependencies_check
 	# Checking for at least one subdirectory existing
-	ls -d */ > /dev/null
-	if [ $? -eq 0 ]
-	then
+	if ls -d */ > /dev/null 2>&1; then
 		echo -e "${GREEN_COLOR}[OK] ${DEFAULT}At least one subfolder exists"
 	else
 		echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}No subfolders founded"
@@ -54,46 +52,33 @@ function tl_organize_and_create_demo {
 	# Create folder structure, move files and create demo
 	for i in */;
 		do
-			echo $delimiter
-			dir=$(echo $i | sed 's|/$||');
+			echo "$delimiter"
+			dir="${i%/}";
 			rawfiles=$(find "$dir" -type f -maxdepth 1 \( -name "*.ARW" -or -name "*.CR2" -or -name "*.NEF" \))
 			if [ ! -d "$dir/Raw" ] && [ ! -z "$rawfiles" ]; then
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}The folder Raw does NOT exist in $dir"
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating Raw folder in $dir"
 				mkdir -p "$dir/Raw"
-				cr2file=$(find "$dir" -maxdepth 1 -type f -name "*.CR2")
-				arwfile=$(find "$dir" -maxdepth 1 -type f -name "*.ARW")
-				neffile=$(find "$dir" -maxdepth 1 -type f -name "*.NEF")
-				if [ ! -z "$cr2file" ]; then
-					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving CR2 files to $dir/Raw/"
-					mv "$dir/"*.CR2 "$dir/Raw/"
-				fi
-				if [ ! -z "$arwfile" ]; then
-					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving ARW files to $dir/Raw/"
-					mv "$dir/"*.ARW "$dir/Raw/"
-				fi
-				if [ ! -z "$neffile" ]; then
-					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving NEF files to $dir/Raw/"
-					mv "$dir/"*.NEF "$dir/Raw/"
-				fi
+				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving Raw files to $dir/Raw/"
+				find "$dir" -maxdepth 1 -type f \( -name "*.ARW" -o -name "*.CR2" -o -name "*.NEF" \) -exec mv {} "$dir/Raw/" \;
 			else
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Raw exists in $dir or no Raw files in directory"
 			fi
 
-			jpgfiles=$(find "$dir" -type f -maxdepth 1 -name "*.JPG")
+			jpgfiles=$(find "$dir" -type f -maxdepth 1 \( -name "*.JPG" -o -name "*.jpg" \))
 			if [ ! -d "$dir/Jpg" ] && [ ! -z "$jpgfiles" ]; then
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}The folder Jpg does NOT exist in $dir"
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating Jpg folder in $dir"
 				mkdir -p "$dir/Jpg"
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving JPG files to $dir/Jpg/"
-				mv "$dir/"*.JPG "$dir/Jpg/"
+				find "$dir" -maxdepth 1 -type f \( -name "*.JPG" -o -name "*.jpg" \) -exec mv {} "$dir/Jpg/" \;
 				if [ -f "$dir/demo.mp4" ]; then
 					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Rename $dir/demo.mp4 to $dir/demo_old.mp4"
 					mv "$dir/demo.mp4" "$dir/demo_old.mp4"
 				fi
 				echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating demo timelapse from JPGs"
-				ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.JPG" -c:v libx264 -pix_fmt yuv420p "$dir/demo.mp4"
-				#tlassemble "$dir/"Jpg "$dir/"demo.mov -fps 25 -height 1080 -codec h264 -quality high
+				find "$dir/Jpg" -maxdepth 1 -name "*.JPG" -exec bash -c 'mv "$1" "${1%.JPG}.jpg"' _ {} \;
+				ffmpeg -framerate 25 -pattern_type glob -i "$dir/Jpg/*.jpg" -c:v libx264 -pix_fmt yuv420p "$dir/demo.mp4"
 			else
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The folder Jpg exists in $dir or no Jpg files in directory"
 				if [ -d "$dir/Raw" ] && [ ! -d "$dir/Jpg" ]; then
@@ -101,7 +86,8 @@ function tl_organize_and_create_demo {
 					mkdir -p "$dir/Jpg"
 					rawfiles=$(find "$dir/Raw" -maxdepth 1 -type f -name "*.CR2" -o -name "*.ARW" -o -name "*.NEF")
 					if [ ! -z "$rawfiles" ]; then
-						raw_extension=$(echo $rawfiles | rev | cut -d"." -f1 | rev)
+						first_raw=$(echo "$rawfiles" | head -1)
+					raw_extension="${first_raw##*.}"
 						echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Found $raw_extension files"
 						for i in "$dir"/Raw/*.$raw_extension;
 							do
@@ -127,9 +113,7 @@ function tl_organize_and_create_demo {
 function 360_organize {
 	clear
 	# Checking for at least one subdirectory existing
-	ls -d */ > /dev/null
-	if [ $? -eq 0 ]
-	then
+	if ls -d */ > /dev/null 2>&1; then
         echo -e "${GREEN_COLOR}[OK] ${DEFAULT}At least one subfolder exists"
 	else
         echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}No subfolders founded" >&2
@@ -138,8 +122,8 @@ function 360_organize {
 
     for i in */;
         do
-            echo $delimiter
-            dir=$(echo $i | sed 's|/$||');
+            echo "$delimiter"
+            dir="${i%/}";
 
             #Checking if DNG folder not exist in subdirectory and DNG files exist
             dngfiles_check=$(find "$dir" -type f -maxdepth 1 \( -name "*.dng" \))
@@ -192,7 +176,7 @@ function move_lightroom_folders {
 	clear
 	for i in */;
 		do
-			dir=$(echo $i | sed 's|/$||');
+			dir="${i%/}";
 			if [ ! -d "$dir/Lightroom" ]; then
 				if [ ! -d "$dir/Raw/Lightroom" ]; then
 					echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The Lightroom folder does NOT exist in $dir/Raw"
@@ -203,7 +187,7 @@ function move_lightroom_folders {
 			else
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The Lightroom folder does EXIST in $dir"
 			fi
-			echo $delimiter
+			echo "$delimiter"
 	done;
 }
 
@@ -211,8 +195,7 @@ function move_lightroom_folders {
 function create_ae_project {
 	# Checking for at least one subdirectory existing
 	clear
-	ls -d */ > /dev/null
-	if [ $? -eq 0 ]; then
+	if ls -d */ > /dev/null 2>&1; then
 		echo -e "${GREEN_COLOR}[OK] ${DEFAULT}At least one subfolder exists"
 	else
 		echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}No subfolders founded" >&2
@@ -221,8 +204,8 @@ function create_ae_project {
 	# Checking subdirectories and creating project files if they not exist
 	for i in */;
 		do
-			echo $delimiter
-			dir=$(echo -e $i | sed 's|/$||');
+			echo "$delimiter"
+			dir="${i%/}";
 			if [ -f "$dir/$dir.aep" ]; then
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}The project file $dir.aep already exists"
 			else
@@ -239,6 +222,7 @@ function create_ae_project {
 }
 
 function bf_move_raw_files {
+	shopt -s nullglob
 	if [ ! -d "Raw" ]; then
 		echo -e "${GREEN_COLOR}[OK] ${DEFAULT}The folder Raw does NOT exist."
 		echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Creating Raw folder."
@@ -250,7 +234,7 @@ function bf_move_raw_files {
 	for i in */*.ARW;
 		do
 			dir=$(echo $i | cut -f1 -d "/")
-			if [ $dir == "Raw" ]; then
+			if [ "$dir" = "Raw" ]; then
 				echo -e "${YELLOW_COLOR}[SKIP] ${DEFAULT}Raw folder."
 			else
 				file=$(echo $i | cut -f2 -d "/")
@@ -265,6 +249,7 @@ function bf_move_raw_files {
 }
 
 function bf_n_move {
+	shopt -s nullglob
 	read -r -p "Keep every nth photo. Enter n: " n
 	case $n in
 		''|*[!0-9]*)
@@ -277,7 +262,7 @@ function bf_n_move {
 	esac
 
 	x=1
-	dir=(${PWD##*/})
+	dir="${PWD##*/}"
 	rawfiles=$(find . -name "*.ARW")
 	if [ ! -d "../${dir}_KEEP" ] && [ -n "$rawfiles" ]; then
 		echo -e "${GREEN_COLOR}[OK] ${DEFAULT}The folder ../${dir}_KEEP does NOT exist."
@@ -291,7 +276,7 @@ function bf_n_move {
 	for i in *.ARW;
 		do
 			if [ ! -f "../${dir}_KEEP/$i" ]; then
-				if [ $x == "$n" ]; then
+				if [ "$x" = "$n" ]; then
 					echo -e "${GREEN_COLOR}[OK] ${DEFAULT}Moving $i files to ../${dir}_KEEP"
 					mv "$i" "../${dir}_KEEP"
 					x=1
@@ -317,7 +302,7 @@ function help {
 	echo -e "${YELLOW_COLOR}-lr${DEFAULT}               Move lightroom forders ./ (Run from folder with subfolders projects)"
 	echo -e "${YELLOW_COLOR}-p | --project${DEFAULT}    Create project files. Create blank AF .aep and .txt. (Run from folder with subfolders projects)"
 	echo -e "${YELLOW_COLOR}-bfr${DEFAULT}              Move ARW files from subfolders to Raw folder. (Run from project's folder with ARW in subfolders)"
-	echo -e "${YELLOW_COLOR}-bfn${DEFAULT}              Move nth photo to folder _KEEP. (Run from project's folder with ARW in subfolders)"
+	echo -e "${YELLOW_COLOR}-bfn${DEFAULT}              Move nth photo to folder _KEEP. (Run from folder containing ARW files)"
 	echo
 }
 
